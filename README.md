@@ -195,21 +195,34 @@ data = Data(
 
 ## Architecture
 
-CoordNet uses PaiNN-style E(3)-equivariant message passing (as building blocks) with dual conditioning on atomic number (Z) and global molecular charge (Q).
+CoordNet uses PaiNN-style E(3)-equivariant message passing as building blocks, with dual conditioning on atomic number (Z) and global molecular charge (Q). Scalar targets (energy, gap) are rotation/translation invariant; the dipole magnitude is computed via equivariant pooling.
 
 | Component | Description |
 |-----------|-------------|
 | `DualEmbedding` | Atom (Z) + charge (Q) embedding |
 | `RadialBasisFunctions` | Gaussian RBF distance encoding |
 | `PaiNNLayer` | E(3)-equivariant message passing |
-| `EnergyHead` / `GapHead` | Scalar property prediction |
-| `DipoleHead` | Dipole magnitude prediction (equivariant pooling → scalar) |
+| `EnergyHead` / `GapHead` | Scalar property prediction (invariant) |
+| `DipoleHead` | Dipole magnitude via equivariant vector pooling |
+
+For full update equations, see [`docs/method.md`](docs/method.md).
 
 ### Atom Reference Correction
 
-Energy prediction uses per-element reference energies fitted on training data:
+Energy prediction uses per-element reference energies fitted on training data, enabling size-consistent predictions:
 
 $$E_{\text{pred}} = E_{\text{NN}} + \sum_i E_{\text{ref}}(Z_i)$$
+
+## Pretrained Checkpoints
+
+Pretrained model weights will be released upon publication.
+
+<!-- 
+After publication, update this section:
+| Checkpoint | Config | Test MAE (Energy) | Download |
+|------------|--------|-------------------|----------|
+| CoordNet-v1.0 | paper.yaml | 6.2 meV/atom | [Link]() |
+-->
 
 ## Citation
 
