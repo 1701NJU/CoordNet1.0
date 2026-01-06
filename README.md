@@ -29,8 +29,8 @@
 ## Installation
 
 ```bash
-git clone https://github.com/luowenlin862/CoordNet.git
-cd CoordNet
+git clone https://github.com/1701NJU/CoordNet1.0.git
+cd CoordNet1.0
 pip install -r requirements.txt
 ```
 
