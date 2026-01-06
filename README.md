@@ -4,7 +4,7 @@
   <img src="docs/architecture.png" width="800"/>
 </p>
 
-**CoordNet** is an E(3)-equivariant graph neural network for property prediction of transition metal coordination complexes. The model encodes electronic states from 3D geometry and physical constraints, using only atomic numbers, positions, and molecular charge as inputs.
+**CoordNet** is an E(3)-equivariant graph neural network for property prediction of transition metal coordination complexes. The model learns geometry-conditioned representations that capture electronic-structure signals under physical constraints, using only atomic numbers, 3D positions, and total molecular charge as inputs.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -12,10 +12,11 @@
 
 ## Key Features
 
-- **E(3) Equivariance**: Predictions are invariant to rotations and translations
-- **Geometry-based Encoding**: Decodes electronic states from 3D structure without relying on heuristic chemical labels
-- **Dual Embedding**: Combines atomic number and molecular charge embeddings
-- **Multi-task Learning**: Simultaneous prediction of energy, HOMO-LUMO gap, dipole moment, and NPA charges
+- **E(3)-equivariant representation**: Scalar targets are rotation/translation invariant; vector targets (e.g., dipole) transform equivariantly
+- **Geometry-based encoding**: Infers electronic-structure–relevant observables from 3D structure without relying on heuristic chemical labels (e.g., oxidation states)
+- **Electronic boundary condition**: Conditions on total molecular charge **Q** as a rigorous global invariant
+- **Thermodynamic scaling**: Supports size-consistent learning/evaluation via per-atom normalization for extensive targets
+- **Multi-task learning**: Simultaneous prediction of energy, HOMO–LUMO gap, dipole moment, and NPA charges
 
 ## Model Variants
 
@@ -24,7 +25,7 @@
 | **CoordNet** (default) | Geometry-only model using (z, pos, Q) | `configs/paper.yaml` |
 | CoordNet-Geo+FP | Ablation with Morgan fingerprint fusion | `configs/ablation_with_fp.yaml` |
 
-> **Note**: The paper results use the default geometry-only model. The fingerprint fusion variant is provided for ablation studies only.
+> **Note**: The paper-style results reported in this repository use the default **geometry-only** model. The fingerprint-fusion variant is provided for ablation/engineering comparisons only.
 
 ## Installation
 
@@ -57,14 +58,14 @@ python -c "import torch; print(torch.__version__, torch.version.cuda)"
 pip install torch-scatter torch-sparse torch-geometric -f https://data.pyg.org/whl/torch-2.0.0+cu121.html
 ```
 
-See [PyG Installation Guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html) for details.
+See the [PyG installation guide](https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html) for details.
 
 ### Dependencies
 
 - Python >= 3.10
 - PyTorch >= 2.0
 - PyTorch Geometric >= 2.4
-- RDKit >= 2023.03 (for data preprocessing)
+- RDKit (optional; required only for the FP ablation or SMILES-derived preprocessing)
 
 ## Dataset
 
@@ -84,11 +85,11 @@ cd data/raw
 git clone https://github.com/bbskjelern/tmQM.git tmQM-master
 ```
 
-The dataset will be automatically preprocessed on first training run. Preprocessing takes 10-30 minutes and creates a cached file at `data/processed/tmqm_data.pt`.
+Preprocessing takes 10–30 minutes (depending on hardware) and creates cached files under `data/processed/`.
 
 ## Training
 
-### Paper Reproduction
+### Paper-Style Reproduction
 
 ```bash
 # Full reproduction pipeline
@@ -114,7 +115,7 @@ model:
   hidden_dim: 128      # Feature dimension
   num_layers: 3        # Number of PaiNN layers
   cutoff: 5.0          # Neighbor cutoff (Å)
-  use_fp: false        # Geometry-only (paper default)
+  use_fp: false        # Geometry-only (paper-style default)
 
 training:
   batch_size: 32
@@ -125,21 +126,21 @@ training:
 
 ## Model Performance
 
-Results on tmQM test set (random 80/10/10 split, seed=42):
+Results on the tmQM test set (random 80/10/10 split, seed=42, config = `configs/paper.yaml`):
 
 | Property | MAE | Unit | Notes |
 |----------|-----|------|-------|
-| Electronic Energy | 6.2 | meV/atom | Per-atom normalized |
-| HOMO-LUMO Gap | 0.27 | eV | |
-| Dipole Moment | 0.42 | D | |
+| Electronic Energy | 6.2 | meV/atom | Total energy MAE normalized by atom count |
+| HOMO–LUMO Gap | 0.27 | eV | (internally may be represented in Hartree) |
+| Dipole Moment | 0.42 | D | MAE on dipole magnitude |
 
 <details>
-<summary>Additional metrics (click to expand)</summary>
+<summary>Additional reporting (click to expand)</summary>
 
-| Property | MAE (total) | Unit |
-|----------|-------------|------|
-| Electronic Energy | 0.31 | eV/molecule |
-| HOMO-LUMO Gap | 0.010 | Hartree |
+| Property | MAE (total) | Unit | Notes |
+|----------|-------------|------|-------|
+| Electronic Energy | 0.31 | eV/molecule | Unnormalized total-energy MAE |
+| HOMO–LUMO Gap | 0.27 (0.010) | eV (Hartree) | 1 Hartree = 27.2114 eV |
 
 </details>
 
@@ -154,61 +155,55 @@ from coordnet import CoordNet, AtomRefCalculator
 # Load model
 atom_ref = AtomRefCalculator().load('runs/best/atom_ref.npz')
 model = CoordNet(atom_ref=atom_ref)
-model.load_state_dict(torch.load('runs/best/best_model.pt')['model_state_dict'])
+state = torch.load('runs/best/best_model.pt', map_location='cpu')
+model.load_state_dict(state['model_state_dict'])
 model.eval()
 
-# Predict
+# Predict (batch: PyG Batch with z, pos, charge, batch)
 with torch.no_grad():
     output = model(batch)
-    energy = output['energy']      # [B] eV
-    gap = output['gap']            # [B] Hartree (multiply by 27.2114 for eV)
-    dipole = output['dipole']      # [B] Debye
-    npa = output['npa']            # [N] e
+
+    # Total electronic energy (eV/molecule)
+    energy = output['energy']          # shape: [B]
+
+    # Gap (Hartree by default; convert to eV if needed)
+    gap_h = output['gap']              # shape: [B]
+    gap_ev = gap_h * 27.2114
+
+    # Dipole magnitude (Debye)
+    dipole = output['dipole']          # shape: [B]
+
+    # NPA charges (per atom)
+    npa = output['npa']                # shape: [N]
 ```
 
-### Custom Data
+### Custom Data (Geometry-only)
 
 CoordNet requires minimal input: atomic numbers, positions, and molecular charge.
 
 ```python
+import torch
 from torch_geometric.data import Data
 
-# Minimal input (geometry-only, paper model)
 data = Data(
-    z=torch.tensor([26, 6, 7, 8]),           # Atomic numbers
-    pos=torch.tensor([[0, 0, 0], ...]),      # Coordinates (Å)
-    charge=torch.tensor([0]),                 # Molecular charge
-    batch=torch.zeros(4, dtype=torch.long)   # Batch indices
+    z=torch.tensor([26, 6, 7, 8], dtype=torch.long),     # Atomic numbers
+    pos=torch.tensor([[0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]),  # Å
+    charge=torch.tensor([0.0]),                           # Total molecular charge
+    batch=torch.zeros(4, dtype=torch.long)               # Batch indices
 )
 ```
 
 ## Architecture
 
-### Model Components
+CoordNet uses PaiNN-style E(3)-equivariant message passing (as building blocks) with dual conditioning on atomic number (Z) and global molecular charge (Q).
 
 | Component | Description |
 |-----------|-------------|
 | `DualEmbedding` | Atom (Z) + charge (Q) embedding |
 | `RadialBasisFunctions` | Gaussian RBF distance encoding |
 | `PaiNNLayer` | E(3)-equivariant message passing |
-| `GeometryOnlyReadout` | Graph-level pooling (default) |
 | `EnergyHead` / `GapHead` | Scalar property prediction |
-| `DipoleHead` | E(3)-equivariant vector prediction |
-
-### E(3) Equivariance
-
-The model maintains E(3) equivariance through:
-
-1. **Scalar features** $\mathbf{s}_i \in \mathbb{R}^F$: Invariant under rotations
-2. **Vector features** $\mathbf{v}_i \in \mathbb{R}^{3 \times F}$: Transform as SO(3) vectors
-
-### Message Passing
-
-For each edge $(i, j)$:
-
-$$\Delta \mathbf{s}_i = \sum_{j} \phi(\mathbf{s}_j) \odot W(d_{ij})$$
-
-$$\Delta \mathbf{v}_i = \sum_{j} \left[\mathbf{m}^{sv}_{ij} + (\mathbf{v}_j \cdot \hat{r}_{ij}) \mathbf{m}^{vv}_{ij}\right] \otimes \hat{r}_{ij}$$
+| `DipoleHead` | Dipole magnitude prediction (equivariant pooling → scalar) |
 
 ### Atom Reference Correction
 
@@ -218,17 +213,19 @@ $$E_{\text{pred}} = E_{\text{NN}} + \sum_i E_{\text{ref}}(Z_i)$$
 
 ## Citation
 
-If you use this code in your research, please cite:
+If you use this code in your research, please cite the repository:
 
 ```bibtex
-@article{coordnet2026,
-  title={CoordNet: E(3)-Equivariant Neural Network for Transition Metal Complex Property Prediction},
-  author={Luo, Wenlin},
-  journal={},
-  year={2026},
-  note={Code available at https://github.com/1701NJU/CoordNet1.0}
+@software{coordnet_repo_2026,
+  title   = {CoordNet1.0},
+  author  = {Luo, Wenlin},
+  year    = {2026},
+  url     = {https://github.com/1701NJU/CoordNet1.0},
+  note    = {Code for an E(3)-equivariant model for coordination complexes. Manuscript in preparation.}
 }
 ```
+
+> **Manuscript status**: This repository accompanies an unpublished manuscript (not yet accepted). The citation will be updated upon publication.
 
 ## Contact
 
@@ -242,6 +239,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- [PaiNN](https://github.com/atomistic-machine-learning/schnetpack) - Base equivariant architecture
-- [tmQM](https://github.com/bbskjelern/tmQM) - Transition metal complex dataset
-- [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/) - Graph neural network framework
+- [PaiNN](https://github.com/atomistic-machine-learning/schnetpack)-style equivariant message passing (building blocks)
+- [tmQM dataset](https://github.com/bbskjelern/tmQM)
+- [PyTorch Geometric](https://pytorch-geometric.readthedocs.io/)
