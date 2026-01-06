@@ -242,8 +242,8 @@ If you use this code in your research, please cite the repository:
 
 ## Contact
 
-- **Author**: Wenlin Luo
-- **Email**: luowenlin862@gmail.com
+- **Author**: Wenlin Luo. ZeFeng Jiang.
+- **Email**: luowenlin862@gmail.com pploveqbb@gmail.com
 - **Issues**: [GitHub Issues](https://github.com/1701NJU/CoordNet1.0/issues)
 
 ## License
