@@ -231,7 +231,7 @@ If you use this code in your research, please cite the repository:
 ```bibtex
 @software{coordnet_repo_2026,
   title   = {CoordNet1.0},
-  author  = {Luo Wenlin,Li Chenghui,Jiang ZeFeng},
+  author  = {Luo Wenlin,Li Chenghui},
   year    = {2026},
   url     = {https://github.com/1701NJU/CoordNet1.0},
   note    = {Code for an E(3)-equivariant model for coordination complexes. Manuscript in preparation.}
@@ -242,8 +242,8 @@ If you use this code in your research, please cite the repository:
 
 ## Contact
 
-- **Author**: Wenlin Luo. ZeFeng Jiang.
-- **Email**: luowenlin862@gmail.com pploveqbb@gmail.com
+- **Author**: Wenlin Luo.
+- **Email**: luowenlin862@gmail.com 
 - **Issues**: [GitHub Issues](https://github.com/1701NJU/CoordNet1.0/issues)
 
 ## License
