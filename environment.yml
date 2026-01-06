@@ -1,0 +1,35 @@
+# CoordNet Conda Environment
+# 
+# Tested on: NVIDIA A800 / CUDA 12.1 / Python 3.10
+#
+# Installation:
+#   conda env create -f environment.yml
+#   conda activate coordnet
+#
+# Note: PyTorch Geometric wheels depend on your CUDA version.
+# If the default installation fails, visit:
+# https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html
+
+name: coordnet
+channels:
+  - pytorch
+  - pyg
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pytorch>=2.0
+  - pytorch-cuda=12.1
+  - numpy>=1.24
+  - pandas>=2.0
+  - scikit-learn>=1.3
+  - pyyaml>=6.0
+  - tqdm>=4.65
+  - pip
+  - pip:
+    - torch-geometric>=2.4
+    - torch-scatter
+    - rdkit>=2023.03
+    - tensorboard>=2.13
+

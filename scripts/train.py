@@ -153,9 +153,13 @@ def main(args):
         cutoff=config['model']['cutoff'],
         num_elements=config['model']['num_elements'],
         num_charges=config['model']['num_charges'],
+        use_fp=config['model'].get('use_fp', False),
         fp_dim=config['data']['fp_bits'],
         atom_ref=atom_ref
     ).to(device)
+    
+    model_variant = "CoordNet-Geo+FP" if config['model'].get('use_fp', False) else "CoordNet"
+    print(f"Model variant: {model_variant}")
     
     print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
     

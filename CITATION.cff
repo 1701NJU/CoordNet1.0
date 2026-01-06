@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "CoordNet: A Physics-Constrained Machine Learning Framework for Coordination Complexes"
+version: 1.0.0
+date-released: 2026-01-06
+authors:
+  - family-names: "Luo"
+    given-names: "Wenlin"
+    email: "luowenlin862@gmail.com"
+repository-code: "https://github.com/1701NJU/CoordNet1.0"
+license: MIT
+keywords:
+  - equivariant-gnn
+  - coordination-chemistry
+  - transition-metals
+  - graph-neural-network
+  - pytorch-geometric
+  - machine-learning
+  - computational-chemistry
+abstract: >-
+  CoordNet is an E(3)-equivariant graph neural network designed for 
+  property prediction of transition metal coordination complexes. 
+  The model uses only 3D geometry (atomic numbers, positions) and 
+  molecular charge to predict electronic properties including energy, 
+  HOMO-LUMO gap, dipole moment, and NPA charges.
+

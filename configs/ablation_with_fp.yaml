@@ -1,5 +1,11 @@
-# CoordNet Default Configuration
-# Paper reproduction: use configs/paper.yaml instead
+# CoordNet-Geo+FP Ablation Configuration
+# This is an ablation variant that uses Morgan fingerprint fusion.
+#
+# Note: This is NOT the paper's main model. Use for ablation study only.
+# For paper reproduction, use configs/paper.yaml
+#
+# Usage:
+#   python scripts/train.py --config configs/ablation_with_fp.yaml
 
 data:
   root: "data"
@@ -17,8 +23,8 @@ model:
   cutoff: 5.0
   num_elements: 100
   num_charges: 5
-  # Model variant: set to true for CoordNet-Geo+FP (ablation study)
-  use_fp: false
+  # Ablation: enable fingerprint fusion
+  use_fp: true
 
 training:
   batch_size: 32
@@ -42,3 +48,4 @@ loss_weights:
 logging:
   log_dir: "runs"
   save_interval: 10
+
