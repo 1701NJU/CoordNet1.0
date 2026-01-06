@@ -231,7 +231,7 @@ If you use this code in your research, please cite the repository:
 ```bibtex
 @software{coordnet_repo_2026,
   title   = {CoordNet1.0},
-  author  = {Luo, Wenlin},
+  author  = {Luo Wenlin,Li Chenghui,Jiang ZeFeng},
   year    = {2026},
   url     = {https://github.com/1701NJU/CoordNet1.0},
   note    = {Code for an E(3)-equivariant model for coordination complexes. Manuscript in preparation.}
